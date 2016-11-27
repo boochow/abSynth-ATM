@@ -99,14 +99,16 @@ uint16_t read_vle(const byte **pp) {
   byte d;
   do {
     q <<= 7;
-    d = pgm_read_byte(*pp++);
+//    d = pgm_read_byte(*pp++);
+    d = **pp++;
     q |= (d & 0x7F);
   } while (d & 0x80);
   return q;
 }
 
 static inline const byte *getTrackPointer(byte track) {
-  return trackBase + pgm_read_word(&trackList[track]);
+//  return trackBase + pgm_read_word(&trackList[track]);
+  return trackBase + trackList[track];
 }
 
 ATMSynth ATM;
@@ -132,14 +134,16 @@ void ATMSynth::begin(uint16_t hz) {
 // Load a melody stream and start grinding samples
 void ATMSynth::play(const byte *song) {
   // Read track count
-  trackCount = pgm_read_byte(song++);
+//  trackCount = pgm_read_byte(song++);
+  trackCount = *song++;
   // Store track list pointer
   trackList = (word*)song;
   // Store track pointer
   trackBase = (song += (trackCount << 1)) + 4;
   // Fetch starting points for each track
   for (unsigned n = 0; n < 4; n++) {
-    channel[n].ptr = getTrackPointer(pgm_read_byte(song++));
+//    channel[n].ptr = getTrackPointer(pgm_read_byte(song++));
+    channel[n].ptr = getTrackPointer(*song++);
   }
 }
 
@@ -274,7 +278,8 @@ void ATM_playroutine() {
     if (ch->delay) ch->delay--;
     else {
       do {
-        byte cmd = pgm_read_byte(ch->ptr++);
+//        byte cmd = pgm_read_byte(ch->ptr++);
+        byte cmd = *(ch->ptr++);
         if (cmd < 64) {
           // 0 … 63 : NOTE ON/OFF
           if (ch->note = cmd) ch->note += ch->tranConfig;
@@ -285,59 +290,74 @@ void ATM_playroutine() {
           // 64 … 159 : SETUP FX
           switch (cmd - 64) {
             case 0: // Set volume
-              ch->vol = pgm_read_byte(ch->ptr++);
+//              ch->vol = pgm_read_byte(ch->ptr++);
+              ch->vol = *(ch->ptr++);
               break;
             case 1: // Slide volume ON
-              ch->volSlide = pgm_read_byte(ch->ptr++);
+//              ch->volSlide = pgm_read_byte(ch->ptr++);
+              ch->volSlide = *(ch->ptr++);
               break;
             case 2: // Slide volume ON advanced
-              ch->volSlide = pgm_read_byte(ch->ptr++);
-              ch->volConfig = pgm_read_byte(ch->ptr++);
+//              ch->volSlide = pgm_read_byte(ch->ptr++);
+              ch->volSlide = *(ch->ptr++);
+//              ch->volConfig = pgm_read_byte(ch->ptr++);
+              ch->volConfig = *(ch->ptr++);
               break;
             case 3: // Slide volume OFF (same as 0x01 0x00)
               ch->volSlide = 0;
               break;
             case 4: // Slide frequency ON
-              ch->freqSlide = pgm_read_byte(ch->ptr++);
+//              ch->freqSlide = pgm_read_byte(ch->ptr++);
+              ch->freqSlide = *(ch->ptr++);
               break;
             case 5: // Slide frequency ON advanced
-              ch->freqSlide = pgm_read_byte(ch->ptr++);
-              ch->freqConfig = pgm_read_byte(ch->ptr++);
+//              ch->freqSlide = pgm_read_byte(ch->ptr++);
+              ch->freqSlide = *(ch->ptr++);
+//              ch->freqConfig = pgm_read_byte(ch->ptr++);
+              ch->freqConfig = *(ch->ptr++);
               break;
             case 6: // Slide frequency OFF
               ch->freqSlide = 0;
               break;
             case 7: // Set Arpeggio
-              ch->arpNotes = pgm_read_byte(ch->ptr++);    // 0x40 + 0x03
-              ch->arpTiming = pgm_read_byte(ch->ptr++);   // 0x80 + 0x40 + 0x20 + amount
+//              ch->arpNotes = pgm_read_byte(ch->ptr++);    // 0x40 + 0x03
+              ch->arpNotes = *(ch->ptr++);
+//              ch->arpTiming = pgm_read_byte(ch->ptr++);   // 0x80 + 0x40 + 0x20 + amount
+              ch->arpTiming = *(ch->ptr++);
               break;
             case 8: // Arpeggio off
               ch->arpNotes = 0;
               break;
             case 9: // Set Retriggering (noise)
-              ch->reConfig = pgm_read_byte(ch->ptr++);    // RETRIG: point = 1 (*4), speed = 0 (0 = fastest, 1 = faster , 2 = fast)
+//              ch->reConfig = pgm_read_byte(ch->ptr++);    // RETRIG: point = 1 (*4), speed = 0 (0 = fastest, 1 = faster , 2 = fast)
+              ch->reConfig = *(ch->ptr++);
               break;
             case 10: // Retriggering (noise) OFF
               ch->reConfig = 0;
               break;
             case 11: // ADD Transposition
-              ch->tranConfig += (char)pgm_read_byte(ch->ptr++);
-              break;
+//              ch->tranConfig += (char)pgm_read_byte(ch->ptr++);
+              ch->tranConfig += (char) *(ch->ptr++);
+             break;
             case 12: // SET Transposition
-              ch->tranConfig = pgm_read_byte(ch->ptr++);
+//              ch->tranConfig = pgm_read_byte(ch->ptr++);
+              ch->tranConfig = *(ch->ptr++);
               break;
             case 13: // Transposition OFF
               ch->tranConfig = 0;
               break;
             case 14: // SET Tremolo or Vibrato
-              ch->treviDepth = pgm_read_word(ch->ptr++);
-              ch->treviConfig = pgm_read_word(ch->ptr++);
+//              ch->treviDepth = pgm_read_word(ch->ptr++);
+              ch->treviDepth = *((word *)(ch->ptr++));
+//              ch->treviConfig = pgm_read_word(ch->ptr++);
+              ch->treviConfig = *((word *)(ch->ptr++));
               break;
             case 15: // Tremolo or Vibrato  OFF
               ch->treviDepth = 0;
               break;
             case 16: // Glissando
-              ch->glisConfig = pgm_read_byte(ch->ptr++);
+//              ch->glisConfig = pgm_read_byte(ch->ptr++);
+              ch->glisConfig = *(ch->ptr++);
               break;
             case 17: // glissando OFF
               ch->glisConfig = 0;
@@ -356,8 +376,10 @@ void ATM_playroutine() {
           // Stack PUSH
           ch->stackCounter[ch->stackIndex] = ch->counter;
           ch->stackTrack[ch->stackIndex] = ch->track; // note 1
-          ch->counter = cmd == 252 ? 0 : pgm_read_byte(ch->ptr++);
-          ch->track = pgm_read_byte(ch->ptr++);
+//          ch->counter = cmd == 252 ? 0 : pgm_read_byte(ch->ptr++);
+          ch->counter = cmd == 252 ? 0 : *(ch->ptr++);
+//          ch->track = pgm_read_byte(ch->ptr++);
+          ch->track = *(ch->ptr++);
           ch->stackPointer[ch->stackIndex] = ch->ptr - trackBase;
           ch->stackIndex++;
           ch->ptr = getTrackPointer(ch->track);
