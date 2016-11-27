@@ -348,9 +348,9 @@ void ATM_playroutine() {
               break;
             case 14: // SET Tremolo or Vibrato
 //              ch->treviDepth = pgm_read_word(ch->ptr++);
-              ch->treviDepth = *((word *)(ch->ptr++));
+              ch->treviDepth = *(ch->ptr++);
 //              ch->treviConfig = pgm_read_word(ch->ptr++);
-              ch->treviConfig = *((word *)(ch->ptr++));
+              ch->treviConfig = *(ch->ptr++);
               break;
             case 15: // Tremolo or Vibrato  OFF
               ch->treviDepth = 0;
