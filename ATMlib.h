@@ -4,6 +4,8 @@
 #include <inttypes.h>
 #include <Arduino.h>
 
+#define ATMLIB_RAM_SONG
+
 extern byte trackCount;
 extern const word *trackList;
 extern const byte *trackBase;
