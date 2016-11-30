@@ -4,6 +4,8 @@
 #include <inttypes.h>
 #include <Arduino.h>
 
+#define ATMLIB_RAM_SONG
+
 #define CH_ZERO             0
 #define CH_ONE              1
 #define CH_TWO              2
