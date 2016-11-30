@@ -4,6 +4,11 @@
 #include <inttypes.h>
 #include <Arduino.h>
 
+#define CH_ZERO             0
+#define CH_ONE              1
+#define CH_TWO              2
+#define CH_THREE            3
+
 extern byte trackCount;
 extern const word *trackList;
 extern const byte *trackBase;
@@ -17,9 +22,6 @@ class ATMsynth {
     ATMsynth() {};
 
     // Load and play specified song
-    // song needs to point to PROGMEM data
-    // Initialize Squawk to generate samples at sample_rate Hz
-    // Change the tempo - default is 50
     void play(const byte *song);
 
     // Play or Pause playback
@@ -27,6 +29,12 @@ class ATMsynth {
 
     // Stop playback (unloads song)
     void stop();
+
+    // mute a channel so you can play a sound
+    void mute(byte ch);
+
+    // unmute a channel after you played a sound
+    void unmute(byte ch);
 
 };
 
@@ -51,7 +59,7 @@ static inline const byte *getTrackPointer(byte track);
 extern void ATM_playroutine() asm("ATM_playroutine");
 
 
-#define SQUAWK_CONSTRUCT_ISR(TARGET_REGISTER) \
+#define ATMLIB_CONSTRUCT_ISR(TARGET_REGISTER) \
 uint16_t __attribute__((used)) cia, __attribute__((used)) cia_count; \
 ISR(TIMER4_OVF_vect, ISR_NAKED) { \
   asm volatile( \
