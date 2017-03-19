@@ -4,8 +4,6 @@
 #include <inttypes.h>
 #include <Arduino.h>
 
-#define ATMLIB_RAM_SONG
-
 #define CH_ZERO             0
 #define CH_ONE              1
 #define CH_TWO              2
@@ -32,12 +30,7 @@ class ATMsynth {
     // Stop playback (unloads song)
     void stop();
 
-    // mute a channel so you can play a sound
-    void mute(byte ch);
-
-    // unmute a channel after you played a sound
-    void unmute(byte ch);
-
+    void toggleMute(byte ch);
 };
 
 
