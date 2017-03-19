@@ -1,5 +1,13 @@
 #include "ATMlib.h"
 
+#ifdef ATMLIB_RAM_SONG
+#define READ_BYTE(p)  *((p))
+#define READ_WORD(p)  *((p))
+#else
+#define READ_BYTE(p)  pgm_read_byte(p)
+#define READ_WORD(p)  pgm_read_word(p)
+#endif
+
 ATMLIB_CONSTRUCT_ISR(OCR4A)
 
 byte trackCount;
@@ -92,14 +100,14 @@ uint16_t read_vle(const byte **pp) {
   byte d;
   do {
     q <<= 7;
-    d = pgm_read_byte(*pp++);
+    d = READ_BYTE(*pp++);
     q |= (d & 0x7F);
   } while (d & 0x80);
   return q;
 }
 
 static inline const byte *getTrackPointer(byte track) {
-  return trackBase + pgm_read_word(&trackList[track]);
+  return trackBase + READ_WORD(&trackList[track]);
 }
 
 
@@ -126,14 +134,14 @@ void ATMsynth::play(const byte *song) {
 
   // Load a melody stream and start grinding samples
   // Read track count
-  trackCount = pgm_read_byte(song++);
+  trackCount = READ_BYTE(song++);
   // Store track list pointer
   trackList = (word*)song;
   // Store track pointer
   trackBase = (song += (trackCount << 1)) + 4;
   // Fetch starting points for each track
   for (unsigned n = 0; n < 4; n++) {
-    channel[n].ptr = getTrackPointer(pgm_read_byte(song++));
+    channel[n].ptr = getTrackPointer(READ_BYTE(song++));
   }
 }
 
@@ -247,7 +255,7 @@ void ATM_playroutine() {
     if(ch->delay != 0xFFFF) ch->delay--;
     } else {
       do {
-        byte cmd = pgm_read_byte(ch->ptr++);
+        byte cmd = READ_BYTE(ch->ptr++);
         if (cmd < 64) {
           // 0 … 63 : NOTE ON/OFF
           if (ch->note = cmd) ch->note += ch->transConfig;
@@ -258,58 +266,58 @@ void ATM_playroutine() {
           // 64 … 159 : SETUP FX
           switch (cmd - 64) {
             case 0: // Set volume
-              ch->vol = pgm_read_byte(ch->ptr++);
+              ch->vol = READ_BYTE(ch->ptr++);
               ch->reCount = ch->vol;
               break;
             case 1: case 4: // Slide volume/frequency ON
-              ch->volFreSlide = pgm_read_byte(ch->ptr++);
+              ch->volFreSlide = READ_BYTE(ch->ptr++);
               ch->volFreConfig = (cmd - 64) == 1 ? 0x00 : 0x40;
               break;
             case 2: case 5: // Slide volume/frequency ON advanced
-              ch->volFreSlide = pgm_read_byte(ch->ptr++);
-              ch->volFreConfig = pgm_read_byte(ch->ptr++);
+              ch->volFreSlide = READ_BYTE(ch->ptr++);
+              ch->volFreConfig = READ_BYTE(ch->ptr++);
               break;
             case 3: case 6: // Slide volume/frequency OFF (same as 0x01 0x00)
               ch->volFreSlide = 0;
               break;
             case 7: // Set Arpeggio
-              ch->arpNotes = pgm_read_byte(ch->ptr++);    // 0x40 + 0x03
-              ch->arpTiming = pgm_read_byte(ch->ptr++);   // 0x40 (no third note) + 0x20 (toggle retrigger) + amount
+              ch->arpNotes = READ_BYTE(ch->ptr++);    // 0x40 + 0x03
+              ch->arpTiming = READ_BYTE(ch->ptr++);   // 0x40 (no third note) + 0x20 (toggle retrigger) + amount
               break;
             case 8: // Arpeggio OFF
               ch->arpNotes = 0;
               break;
             case 9: // Set Retriggering (noise)
-              ch->reConfig = pgm_read_byte(ch->ptr++);    // RETRIG: point = 1 (*4), speed = 0 (0 = fastest, 1 = faster , 2 = fast)
+              ch->reConfig = READ_BYTE(ch->ptr++);    // RETRIG: point = 1 (*4), speed = 0 (0 = fastest, 1 = faster , 2 = fast)
               break;
             case 10: // Retriggering (noise) OFF
               ch->reConfig = 0;
               break;
             case 11: // ADD Transposition
-              ch->transConfig += (char)pgm_read_byte(ch->ptr++);
+              ch->transConfig += (char)READ_BYTE(ch->ptr++);
               break;
             case 12: // SET Transposition
-              ch->transConfig = pgm_read_byte(ch->ptr++);
+              ch->transConfig = READ_BYTE(ch->ptr++);
               break;
             case 13: // Transposition OFF
               ch->transConfig = 0;
               break;
             case 14: case 16: // SET Tremolo/Vibrato
-              ch->treviDepth = pgm_read_word(ch->ptr++);
-              ch->treviConfig = pgm_read_word(ch->ptr++) + ((cmd - 64) == 14 ? 0x00 : 0x40);
+              ch->treviDepth = READ_BYTE(ch->ptr++);
+              ch->treviConfig = READ_BYTE(ch->ptr++) + ((cmd - 64) == 14 ? 0x00 : 0x40);
               break;
             case 15: case 17: // Tremolo/Vibrato OFF
               ch->treviDepth = 0;
               break;
             case 18: // Glissando
-              ch->glisConfig = pgm_read_byte(ch->ptr++);
+              ch->glisConfig = READ_BYTE(ch->ptr++);
               break;
             case 19: // Glissando OFF
               ch->glisConfig = 0;
               break;
             case 20: // SET Note Cut
               ch->arpNotes = 0xFF;                        // 0xFF use Note Cut
-              ch->arpTiming = pgm_read_byte(ch->ptr++);   // tick amount
+              ch->arpTiming = READ_BYTE(ch->ptr++);   // tick amount
               break;
             case 21: // Note Cut OFF
               ch->arpNotes = 0;
@@ -318,18 +326,18 @@ void ATM_playroutine() {
               memset(channel,0,sizeof(channel));
               break;
             case 92: // ADD tempo
-              tickRate += pgm_read_byte(ch->ptr++);
+              tickRate += READ_BYTE(ch->ptr++);
               cia = 15625 / tickRate;
               break;
             case 93: // SET tempo
-              tickRate = pgm_read_byte(ch->ptr++);
+              tickRate = READ_BYTE(ch->ptr++);
               cia = 15625 / tickRate;
               break;
             case 94: // Goto advanced
-              channel[0].track = pgm_read_byte(ch->ptr++);
-              channel[1].track = pgm_read_byte(ch->ptr++);
-              channel[2].track = pgm_read_byte(ch->ptr++);
-              channel[3].track = pgm_read_byte(ch->ptr++);
+              channel[0].track = READ_BYTE(ch->ptr++);
+              channel[1].track = READ_BYTE(ch->ptr++);
+              channel[2].track = READ_BYTE(ch->ptr++);
+              channel[3].track = READ_BYTE(ch->ptr++);
               break;
             case 95: // Stop channel
               ChannelActiveMute = ChannelActiveMute ^ (1<<(n+4));
@@ -346,8 +354,8 @@ void ATM_playroutine() {
           // 225 … 251 : RESERVED
         } else if (cmd == 252 || cmd == 253) {
           // 252 (253) : CALL (REPEATEDLY)
-      byte new_counter = cmd == 252 ? 0 : pgm_read_byte(ch->ptr++);
-      byte new_track = pgm_read_byte(ch->ptr++);
+      byte new_counter = cmd == 252 ? 0 : READ_BYTE(ch->ptr++);
+      byte new_track = READ_BYTE(ch->ptr++);
 
       if(new_track != ch->track) {
             // Stack PUSH
