@@ -2,8 +2,10 @@
 
 #ifdef ATMLIB_RAM_SONG
 #define READ_BYTE(p)  *((p))
+#define READ_WORD(p)  *((p))
 #else
 #define READ_BYTE(p)  pgm_read_byte(p)
+#define READ_WORD(p)  pgm_read_word(p)
 #endif
 
 ATMLIB_CONSTRUCT_ISR(OCR4A)
@@ -67,6 +69,7 @@ struct ch_t {
   char volfreSlide;
   byte volfreConfig;
   byte volfreCount;
+  byte volInitial;
 
   // Arpeggio or Note Cut FX
   byte arpNotes;       // notes: base, base+[7:4], base+[7:4]+[3:0], if FF => note cut ON
@@ -105,7 +108,7 @@ uint16_t read_vle(const byte **pp) {
 }
 
 static inline const byte *getTrackPointer(byte track) {
-  return trackBase + READ_BYTE(&trackList[track]);
+  return trackBase + READ_WORD(&trackList[track]);
 }
 
 
@@ -264,11 +267,17 @@ void ATM_playroutine() {
             if (ch->note = cmd) ch->note += ch->transConfig;
             ch->freq = pgm_read_word(&noteTable[ch->note]);
             if (ch->arpTiming & 0x20) ch->arpCount = 0; // ARP retriggering
+            ch->vol = ch->volInitial; // !! added only for abSynth ATM to add decaying!!
+//            if ((ch->volfreConfig & 0x40) == 0) { // Tremoro & Vibrato retriggering
+//              ch->vol = ch->volInitial; 
+//              ch->volfreCount = 0;
+//            }
           } else if (cmd < 160) {
             // 64 … 159 : SETUP FX
             switch (cmd - 64) {
               case 0: // Set volume
                 ch->vol = READ_BYTE(ch->ptr++);
+                ch->volInitial = ch->vol;
                 break;
               case 1: case 4: // Slide volume/frequency ON
                 ch->volfreSlide = READ_BYTE(ch->ptr++);
@@ -334,6 +343,7 @@ void ATM_playroutine() {
                 break;
               case 95: // Stop channel
                 ChannelActiveMute = ChannelActiveMute ^ (1<<(n+4));
+                ch->delay = 1; // to exit do while loop
                 break;
             }
           } else if (cmd < 224) {
@@ -344,6 +354,19 @@ void ATM_playroutine() {
             ch->delay = read_vle(&ch->ptr) + 129;
           } else if (cmd < 252) {
             // 225 … 251 : RESERVED
+            switch(cmd - 225) {
+              case 0: //NOP
+              break;
+              case 1: //NOP + 1byte arg
+              ch->ptr++;
+              break;
+              case 2: //NOP + 2bytes arg
+              ch->ptr++;
+              ch->ptr++;
+              break;
+              default:
+              break;
+           }
           } else if (cmd == 252 || cmd == 253) {
             // 252 (253) : CALL (REPEATEDLY)
             // Stack PUSH
